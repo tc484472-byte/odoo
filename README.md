@@ -1,5 +1,5 @@
 # ⚡ Brightloop Subscription Management System
-> **Odoo Hackathon Solution** — A full-stack, enterprise-grade, responsive, and secure Subscription Management, Recurring Invoicing, and Customer Self-Service Portal.
+> **Odoo Hackathon Project** — A complete, reliable, and user-friendly web application for managing recurring subscriptions, automated invoicing, customer self-service, and financial reporting.
 
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
 ![Express.js](https://img.shields.io/badge/Express.js-4.x-000000?logo=express&logoColor=white)
@@ -12,369 +12,206 @@
 
 ---
 
-## 📋 Table of Contents
-- [1. Project Overview & Problem Statement](#1-project-overview--problem-statement)
-- [2. Brightloop Software Case Study Implementation](#2-brightloop-software-case-study-implementation)
-- [3. Technology Stack](#3-technology-stack)
-- [4. System Architecture & Workflows](#4-system-architecture--workflows)
-  - [High-Level Architecture](#high-level-architecture)
-  - [Quotation-to-Subscription Workflow](#quotation-to-subscription-workflow)
-  - [Subscription Lifecycle State Machine](#subscription-lifecycle-state-machine)
-  - [Idempotent Recurring Billing Engine](#idempotent-recurring-billing-engine)
-  - [Payment Reconciliation Workflow](#payment-reconciliation-workflow)
-- [5. User Roles & Permission Matrix](#5-user-roles--permission-matrix)
-- [6. Core Feature Modules](#6-core-feature-modules)
-- [7. Quick Demo Credentials & One-Click Switcher](#7-quick-demo-credentials--one-click-switcher)
-- [8. Local Setup & Installation Guide](#8-local-setup--installation-guide)
-- [9. Running the Automated Test Suite](#9-running-the-automated-test-suite)
-- [10. REST API Specification](#10-rest-api-specification)
-- [11. Free-Tier Production Deployment Guide](#11-free-tier-production-deployment-guide)
+## 👋 Welcome!
+
+If you've ever tried running a subscription or recurring service business on spreadsheets, you probably know the chaos:
+* 📅 **Missed renewals**: Someone forgot to check which contracts expired at the end of the month.
+* 💥 **Double-billing disasters**: A script runs twice or a page gets refreshed, and a client gets billed twice in 5 minutes.
+* 🧩 **Messy payment reconciliation**: A customer pays half their bill through UPI, half via bank wire, and no one knows what the remaining balance is.
+* 📉 **Revenue guesswork**: When leadership asks *"What is our exact MRR this month?"*, people spend hours compiling numbers manually.
+
+We built the **Brightloop Subscription Management System** to tackle all of this head-on. Inspired by the Odoo Subscription problem statement, this application gives businesses a clean, robust, and automated hub for their recurring revenue—built entirely with **free, open-source technologies** so anyone can run, inspect, and deploy it without vendor lock-in or paid API fees.
 
 ---
 
-## 1. Project Overview & Problem Statement
+## 🚀 Quick Start (Up & Running in Under 2 Minutes)
 
-Managing subscription-based SaaS products, hardware leases, and recurring professional services often suffers from:
-1. **Manual Invoicing Errors**: Billing dates missed, incorrect plan pricing, or delayed renewals.
-2. **Double-Billing Disasters**: Race conditions triggering duplicate invoices for the same billing cycle.
-3. **Payment Reconciliation Gaps**: Unmatched bank transfers, partial payments left untracked, and zero visibility into overdue receivables.
-4. **Revenue Blindness**: Inability to calculate live MRR (Monthly Recurring Revenue), ARR, churn, and collection rates.
+You don't even need to install PostgreSQL or configure external cloud accounts to test the app! It comes with a **zero-config in-memory database engine** that automatically persists data to disk.
 
-### The Solution
-The **Brightloop Subscription Management System** solves these challenges end-to-end:
-* Eliminates manual invoicing with an **idempotent, automated cron billing engine**.
-* Enforces **database-level unique billing constraints** to guarantee zero duplicate invoices.
-* Provides **live financial calculations** with multi-variant products, customizable discount rules, and dynamic tax engines.
-* Empowers customers with a **dedicated self-service portal** while safeguarding strict customer data isolation.
-* Built exclusively using **100% free and open-source technologies** with zero paid API dependencies.
+### 1. Clone & Install
+```bash
+git clone https://github.com/tc484472-byte/odoo.git
+cd odoo
 
----
+# Install server dependencies
+cd server
+npm install --legacy-peer-deps
 
-## 2. Brightloop Software Case Study Implementation
+# Install client dependencies
+cd ../client
+npm install
+```
 
-The application contains built-in demonstration seed data matching the hackathon case study:
+### 2. Start the App
+Open two terminals:
 
-| Component | Value | Calculation |
-| :--- | :--- | :--- |
-| **Base Product** | Brightloop ERP Core Suite | ₹12,000.00 / month |
-| **Product Variant** | Odoo Integration Brand Variant | **+₹560.00** |
-| **Subtotal (Base + Variant)** | Core + Odoo Variant | **₹12,560.00** |
-| **Promotional Discount** | 10% First-Time Customer Discount | **-₹1,256.00** |
-| **Taxable Amount** | Subtotal - Discount | **₹11,304.00** |
-| **Applicable Tax** | 18% GST (Goods and Services Tax) | **+₹2,034.72** |
-| **Final Billed Amount** | Total Payable | **₹13,338.72** |
+**Terminal 1 (Backend API):**
+```bash
+cd server
+npm start
+# 🟢 API running at http://localhost:5000
+```
 
-*(All automated unit and integration tests verify this exact mathematical reconciliation to 2 decimal places).*
+**Terminal 2 (Frontend React):**
+```bash
+cd client
+npm run dev
+# 🟢 Frontend live at http://localhost:5173
+```
 
----
-
-## 3. Technology Stack
-
-### Frontend
-* **React 19 with Vite**: Lightning-fast modern build tooling and component rendering.
-* **React Router DOM v7**: Seamless client-side routing, protected routes, and role-based route guards.
-* **Tailwind CSS v3**: Clean, responsive, mobile-first design with a modern slate-and-indigo aesthetic.
-* **Recharts**: Interactive dashboard charts (Revenue trends, Payment distributions, Plan subscriber share).
-* **Lucide React**: Crisp, modern icon library.
-* **jsPDF & html2canvas**: High-fidelity, client-side downloadable PDF invoice generation.
-* **Axios**: HTTP client with global JWT request interceptors and error handling.
-
-### Backend
-* **Node.js & Express.js**: RESTful API architecture following clean controller-service separation.
-* **JWT (JSON Web Tokens)**: Secure, stateless authentication with role-scoped claims (`admin`, `staff`, `customer`).
-* **bcryptjs**: Secure one-way salt hashing (10 salt rounds) for password security.
-* **express-rate-limit**: API brute-force protection on authentication and billing endpoints.
-* **dotenv**: Comprehensive configuration management.
-
-### Database Engine (Dual Mode)
-* **Production**: **PostgreSQL** hosted on **Supabase Free Tier**.
-* **Zero-Config Local Evaluation**: In-memory PostgreSQL engine (`pg-mem`) featuring automatic disk persistence (`server/data/db_snapshot.json`). Evaluators can clone and run without installing local PostgreSQL or creating external accounts!
-* **Sequence Synchronization**: Custom prototype hooks and dynamic sequence synchronizers guarantee primary key integrity without sequence collision.
-
-### Automation & Scheduling
-* **node-cron**: Scheduled background jobs for recurring billing, 7-day renewal alerts, overdue invoice marking, and subscription expiry detection.
-* **GitHub Actions Workflow**: `.github/workflows/billing-cron.yml` triggers deployed headless billing runs daily at 00:00 UTC.
-* **Audit Logging Engine**: Automatically records actor identity, IP address, timestamp, previous state, and updated state for every system mutation.
+Open **`http://localhost:5173`** in your browser.
 
 ---
 
-## 4. System Architecture & Workflows
+## 🎭 1-Click Demo Accounts
 
-### High-Level Architecture
+To make reviewing as easy as possible, the top navigation bar features a **One-Click Demo Switcher** that lets you instantly jump between user roles:
 
+| Role | Demo Email | Password | What You Can Explore |
+| :--- | :--- | :--- | :--- |
+| 👑 **Administrator** | `admin@brightloop.io` | `Password@123` | Full control: Company analytics, team management (add staff/admins), create plans, configure taxes & discounts, trigger automation jobs. |
+| 💼 **Internal Staff** | `staff@brightloop.io` | `Password@123` | Sales & operations: Build quotations, convert them to subscriptions with 1 click, view customers, record payments. |
+| 👤 **Customer** | `customer@brightloop.io` | `Password@123` | Self-service portal: View own subscriptions, check renewal dates, download official PDF tax invoices. |
+
+---
+
+## 💡 The Brightloop Case Study: Real-World Pricing
+
+The application includes realistic demonstration data built around the hackathon scenario (**Brightloop Software** selling its Core ERP with an Odoo Brand variant):
+
+```
+Base Subscription (Brightloop ERP Core)      :   ₹12,000.00 / month
++ Product Variant (Odoo Brand Variant)        :     +₹560.00
+------------------------------------------------------------------
+Subtotal                                     :   ₹12,560.00
+- Promotional Discount (10% First-Time Rule) :   -₹1,256.00
+------------------------------------------------------------------
+Taxable Amount                               :   ₹11,304.00
++ Applicable Tax (18% GST)                   :   +₹2,034.72
+==================================================================
+Total Payable                                :   ₹13,338.72
+```
+
+Every quotation, recurring invoice, and test in our automated suite verifies this exact mathematical calculation down to the paisa.
+
+---
+
+## ✨ What the System Does
+
+### 1. Sales & Quotations (From Pitch to Active Subscription in 1 Click)
+* Sales reps pick a customer, choose a subscription plan (Daily, Weekly, Monthly, or Yearly), and select products with real-time variant additions (e.g., base ₹12,000 + ₹560 variant).
+* Eligible discounts and GST rates are calculated on the fly.
+* When the client agrees, clicking **"Confirm & Create Subscription"** instantly transitions the quote into an active recurring subscription without retyping any information.
+
+### 2. Idempotent Recurring Invoicing (Sleep Soundly at Night)
+* The biggest risk in recurring billing is double-charging. We solved this at the database level with a composite unique constraint: `UNIQUE(subscription_id, billing_period_start)`.
+* Whether a scheduled cron job fires, a webhook retries, or an admin clicks "Run Billing" three times, **it is physically impossible to generate duplicate invoices for the same billing window**.
+* Invoices automatically calculate line items, subtotals, applied discounts, and taxes, and offer **1-click PDF download** for printing or emailing.
+
+### 3. Payment Reconciliation (Partial & Full Payments)
+* Customers don't always pay in full. When a client pays ₹5,000 of their ₹13,338.72 bill via UPI:
+  * The ledger logs the payment and transaction reference.
+  * The invoice's outstanding balance drops to ₹8,338.72.
+  * When the remaining ₹8,338.72 is settled via bank transfer, the invoice automatically flips to `Paid`.
+
+### 4. Background Automation Hub
+* **Daily Recurring Invoicing**: Finds active subscriptions due today, generates invoices, and cleanly advances the next billing date.
+* **7-Day Renewal Reminders**: Scans for subscriptions reaching their end date within a week and triggers reminder notifications.
+* **Overdue Detection**: Marks unpaid invoices past their due date as `Overdue`.
+* **Expiry Detection**: Safely transitions past subscriptions to `Expired`.
+
+### 5. Clear Executive Dashboard
+* Real-time financial health cards: **MRR (Monthly Recurring Revenue)**, **ARR (Annual Recurring Revenue)**, Total Invoiced, Collected, and Outstanding.
+* Visual breakdowns with interactive charts: 6-month revenue trends, payment status distribution, and plan popularity.
+
+---
+
+## 🛠️ Technology Stack & Why We Chose It
+
+We picked modern, proven, and accessible tools so that this project is simple to run locally and free to deploy:
+
+* **Frontend**:
+  * **React 19 + Vite**: Modern, snappy component development with rapid build times.
+  * **Tailwind CSS v3**: Clean, responsive styling that looks great on mobile, tablet, and desktop.
+  * **Recharts**: Clear, interactive SVG charts that don't bog down the browser.
+  * **Lucide React**: Clean, lightweight icons throughout the UI.
+  * **jsPDF**: Generates tax-compliant PDF invoices client-side.
+
+* **Backend**:
+  * **Node.js & Express.js**: Fast, predictable REST API following a clean controller-service architecture.
+  * **JWT & bcryptjs**: Secure password hashing (10 salt rounds) and role-scoped authorization (`admin`, `staff`, `customer`).
+  * **express-rate-limit**: Protects login and billing endpoints against brute force attempts.
+
+* **Database (Dual Mode)**:
+  * **Production**: PostgreSQL on **Supabase Free Tier**.
+  * **Local / Demo Mode**: An in-memory PostgreSQL engine (`pg-mem`) with automated disk snapshots (`server/data/db_snapshot.json`). You can test everything immediately without installing local Postgres.
+
+* **Automation**:
+  * **node-cron**: Internal scheduler running background jobs locally.
+  * **GitHub Actions**: `.github/workflows/billing-cron.yml` provides a free external scheduler to ping the deployed API once a day.
+
+---
+
+## 🔄 How It Works Under the Hood
+
+### System Architecture
 ```mermaid
 flowchart TD
-    subgraph Clients["Clients & UI Layer"]
-        A["Admin Dashboard\n(Platform & Team Mgmt)"]
-        B["Staff Workspace\n(Quotations & Payments)"]
-        C["Customer Portal\n(Self-Service & PDF Invoices)"]
+    subgraph UI["User Interfaces"]
+        Admin["Admin Dashboard\n(Platform & Team Settings)"]
+        Staff["Staff Workspace\n(Quotes, Subscriptions, Payments)"]
+        Customer["Customer Portal\n(View Subscriptions & PDF Invoices)"]
     end
 
-    subgraph API["Backend API (Express.js)"]
-        D["JWT Auth & Role Guard"]
-        E["Quotation & Subscription Service"]
-        F["Idempotent Billing Engine"]
-        G["Payment Reconciliation Service"]
-        H["Automation Hub (node-cron)"]
+    subgraph Backend["Express.js REST API"]
+        Auth["JWT Auth & Role Guards"]
+        SubService["Quotation & Subscription Service"]
+        BillEngine["Idempotent Billing Engine"]
+        PayService["Payment Reconciliation Service"]
+        CronHub["Automation Hub (node-cron)"]
     end
 
-    subgraph DB["PostgreSQL Database (Supabase / In-Memory)"]
-        I[("Users & Roles")]
-        J[("Products & Variants")]
-        K[("Quotations & Subscriptions")]
-        L[("Invoices & Line Items")]
-        M[("Payments & Audit Logs")]
+    subgraph Data["PostgreSQL Storage"]
+        DB[("Users, Products, Plans\nQuotations, Subscriptions\nInvoices, Payments, Audit Logs")]
     end
 
-    A --> D
-    B --> D
-    C --> D
-    D --> E
-    D --> F
-    D --> G
-    H --> F
-    E --> J
-    E --> K
-    F --> L
-    G --> M
-    L --> M
+    UI --> Auth
+    Auth --> SubService
+    Auth --> BillEngine
+    Auth --> PayService
+    CronHub --> BillEngine
+    SubService --> DB
+    BillEngine --> DB
+    PayService --> DB
 ```
 
----
-
-### Quotation-to-Subscription Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Staff as Internal Staff / Sales
-    participant API as API Server
-    participant DB as PostgreSQL DB
-    actor Cust as Customer
-
-    Staff->>API: Select Customer, Product, Variant (+₹560), Plan, Discount & Tax
-    API->>DB: Save Quotation (Status: 'draft' / 'sent')
-    Staff->>API: Click "Confirm & Create Subscription"
-    API->>DB: Begin Transaction
-    API->>DB: Update Quotation (Status: 'confirmed')
-    API->>DB: Create Subscription (Status: 'active', Next Billing: Start Date)
-    API->>DB: Create Subscription Line Items
-    API->>DB: Commit Transaction
-    API-->>Staff: Return Subscription #SUB-2026-000X
-    Cust->>API: Open Customer Portal
-    API-->>Cust: Displays Active Subscription & Renewal Dates
-```
-
----
-
-### Subscription Lifecycle State Machine
-
+### The Subscription Lifecycle
 ```mermaid
 stateDiagram-v2
-    [*] --> Draft: Created by Staff / Quotation
+    [*] --> Draft: Created from Quotation
     Draft --> Confirmed: Validated by Customer
     Confirmed --> Active: Activated on Start Date
-    
-    Active --> Paused: Staff / Customer Pause
-    Paused --> Active: Resume Subscription
-    
-    Active --> Active: Renew Period (Next Billing Advanced)
-    Active --> Expired: Current Date > Expiry Date (Auto-Job)
-    
-    Active --> Closed: Terminated by Admin / Staff
-    Paused --> Closed: Terminated
-    
+    Active --> Paused: Temporarily Suspended
+    Paused --> Active: Resumed
+    Active --> Expired: Term Ended
+    Active --> Closed: Terminated
     Expired --> [*]
     Closed --> [*]
 ```
 
 ---
 
-### Idempotent Recurring Billing Engine
+## 🧪 Automated Testing (35/35 Passing)
 
-```mermaid
-flowchart TD
-    Start["Daily Billing Cron Job Triggered"] --> FetchDue["Find Subscriptions WHERE status = 'active' AND next_billing_date <= TODAY"]
-    FetchDue --> CheckEmpty{"Any subscriptions due?"}
-    CheckEmpty -- No --> Done["Log: 0 Invoices Generated"]
-    CheckEmpty -- Yes --> LoopSubs["Iterate Over Each Due Subscription"]
-    
-    LoopSubs --> CheckDup{"SELECT id FROM invoices WHERE subscription_id = sub.id AND billing_period_start = sub.period_start"}
-    CheckDup -- Exists --> Skip["Idempotency Protection:\nSkip Duplicate Creation"]
-    CheckDup -- Does Not Exist --> Calc["Calculate Variant Charges + Apply Valid Discounts + Compute Taxes"]
-    
-    Calc --> GenerateInv["Generate Unique Invoice Number\n(INV-YYYY-XXXX)"]
-    GenerateInv --> SaveInv["INSERT INTO invoices & invoice_items"]
-    SaveInv --> AdvanceDate["Advance next_billing_date based on plan frequency\n(Daily/Weekly/Monthly/Yearly)"]
-    AdvanceDate --> RecordLog["Record in automation_logs & audit_logs"]
-    RecordLog --> SendEmail["Simulate Email Notification to Customer"]
-    Skip --> NextSub["Next Subscription"]
-    SendEmail --> NextSub
-    NextSub --> LoopSubs
-```
+We believe that financial and billing software must be tested thoroughly. The project includes an automated test harness covering password security, financial math, variant calculations, idempotency, and lifecycle state changes.
 
----
-
-### Payment Reconciliation Workflow
-
-```mermaid
-flowchart LR
-    Inv["Invoice #INV-2026-0001\nTotal: ₹13,338.72\nOutstanding: ₹13,338.72"] --> Pay1["Customer Pays Partial: ₹5,000 via UPI"]
-    Pay1 --> Update1["Invoice Outstanding: ₹8,338.72\nStatus: 'confirmed' (Partial)"]
-    Update1 --> Pay2["Customer Pays Remaining: ₹8,338.72 via Bank Transfer"]
-    Pay2 --> Update2["Invoice Outstanding: ₹0.00\nStatus: 'paid' (Reconciled)"]
-```
-
----
-
-## 5. User Roles & Permission Matrix
-
-| Capability / Module | Administrator | Internal Staff | Customer |
-| :--- | :---: | :---: | :---: |
-| **Analytics Dashboard (MRR, ARR, KPIs)** | ✅ Full Company | ✅ Full Company | 🔒 Self Only |
-| **Create & Manage Products & Variants** | ✅ Yes | 👁️ View Only | ❌ No |
-| **Configure Plans & Frequencies** | ✅ Yes | 👁️ View Only | ❌ No |
-| **Configure Discount & Tax Rules** | ✅ Yes | 👁️ View Only | ❌ No |
-| **Create & Manage Quotations** | ✅ Yes | ✅ Yes | 👁️ View Own |
-| **Manage Subscriptions (Pause/Resume/Renew)** | ✅ Yes | ✅ Yes | 👁️ View Own |
-| **Generate & Manage Invoices** | ✅ Yes | ✅ Yes | 👁️ View Own |
-| **Download PDF Invoices** | ✅ Yes | ✅ Yes | ✅ Yes (Own Only) |
-| **Record Payments (Cash, UPI, Card, Bank)** | ✅ Yes | ✅ Yes | ❌ No |
-| **Create Staff & Admin Accounts** | ✅ Yes (Exclusive) | ❌ No | ❌ No |
-| **Trigger Automation Jobs Manually** | ✅ Yes | ❌ No | ❌ No |
-| **Inspect System Audit Logs** | ✅ Yes | ❌ No | ❌ No |
-
----
-
-## 6. Core Feature Modules
-
-### 1. Products & Variants Module
-* **Base Product Management**: Products contain SKU, Type (Recurring Service / Software License / Hardware), Base Price, Cost Price, and Description.
-* **Variant Pricing Calculations**: Create multi-variant attributes (e.g. Brand, Tier, Server Specs). If the user chooses the *Odoo Integration* variant, the formula automatically computes:
-  $$\text{Final Price} = \text{Base Price} + \text{Variant Additional Price}$$
-  $$\text{Final Price} = ₹12,000 + ₹560 = ₹12,560$$
-
-### 2. Subscription Plans Module
-* Configure plans with flexible billing frequencies: **Daily**, **Weekly**, **Monthly**, and **Yearly**.
-* Minimum quantity requirements and availability date boundaries (start/end dates).
-* Policy controls: Toggle whether plans allow manual pausing, customer renewal, or auto-closure.
-
-### 3. Quotation Management Module
-* Select customer, product, variant, plan, and quantity.
-* Automatic discount application based on order value or minimum volume thresholds.
-* Real-time tax computation preview.
-* **1-Click Conversion**: Converting a quotation automatically provisions the active subscription and sets initial billing cycles without re-entering data.
-
-### 4. Subscription Lifecycle Module
-* Comprehensive state management: `draft` $\rightarrow$ `quotation` $\rightarrow$ `confirmed` $\rightarrow$ `active` $\rightarrow$ `paused` $\rightarrow$ `closed` $\rightarrow$ `expired`.
-* Supports pausing subscriptions during off-seasons and seamless resumption.
-* Next billing date auto-calculation engine based on calendar periods.
-
-### 5. Idempotent Recurring Invoicing Module
-* **Idempotency Guarantee**: Composite unique index (`subscription_id` + `billing_period_start`) ensures a recurring run never bills a customer twice for the same billing window.
-* **Automated Line Items**: Calculates base, variant, discount, and tax lines.
-* **PDF Export**: Generates printable and downloadable tax invoices using `jsPDF`.
-
-### 6. Discount & Tax Engine
-* **Flexible Discounts**: Supports both **Percentage Discounts** (e.g. 10% off) and **Fixed Discounts** (e.g. ₹500 off).
-* **Usage Controls**: Maximum usage caps, active date ranges, and minimum spend rules.
-* **Configurable Taxes**: Zero hardcoded rates. Dynamic GST, VAT, and Sales Tax rules configurable through the Admin UI.
-
-### 7. Payment Tracking & Reconciliation
-* Multi-method payment capture: **UPI**, **Bank Transfer**, **Credit/Debit Card**, **Cash**, and **Other**.
-* Instant ledger reconciliation: Supports partial payments, computes outstanding balances, and marks invoices as `paid` when balance reaches ₹0.00.
-
-### 8. Automation Hub
-* **Recurring Billing Job**: Daily cron searches for due subscriptions, generates invoices, and advances billing dates.
-* **7-Day Renewal Reminders**: Scans expiring subscriptions and fires email notifications before service disruption.
-* **Overdue Detection**: Scans unpaid invoices past their due date and transitions their status to `overdue`.
-* **Subscription Expiry**: Automatically flags subscriptions that have completed their term.
-
-### 9. Analytics & KPI Dashboard
-* Live financial metrics: **MRR (Monthly Recurring Revenue)**, **ARR (Annual Recurring Revenue)**, Total Invoiced, Collected, and Outstanding.
-* Interactive visualizations: Monthly revenue bar charts, payment status breakdown donuts, and plan popularity rankings powered by Recharts.
-
----
-
-## 7. Quick Demo Credentials & One-Click Switcher
-
-For convenience during hackathon evaluation, the top navigation bar features a **One-Click Demo Persona Switcher**:
-
-| Persona Role | Email Address | Password | Permissions |
-| :--- | :--- | :--- | :--- |
-| **Administrator** | `admin@brightloop.io` | `Password@123` | Full administrative control, team provisioning, financial rules, automation triggers |
-| **Internal Staff** | `staff@brightloop.io` | `Password@123` | Quotations, subscriptions, customer records, payment logging |
-| **Customer** | `customer@brightloop.io` | `Password@123` | Self-service portal, view own subscriptions, download invoices |
-
----
-
-## 8. Local Setup & Installation Guide
-
-### Prerequisites
-* [Node.js](https://nodejs.org/) (v18.0.0 or higher)
-* [npm](https://www.npmjs.com/) (v9.0.0 or higher)
-* [Git](https://git-scm.com/)
-
-### Step 1: Clone the Repository
-```bash
-git clone https://github.com/tc484472-byte/odoo.git
-cd odoo
-```
-
-### Step 2: Install Backend Dependencies
-```bash
-cd server
-npm install --legacy-peer-deps
-```
-
-### Step 3: Install Frontend Dependencies
-```bash
-cd ../client
-npm install
-```
-
-### Step 4: Environment Configuration (Optional)
-The backend is equipped with zero-config in-memory PostgreSQL and automatic persistence. If you want to connect to a live Supabase or PostgreSQL instance, edit `server/.env`:
-```env
-PORT=5000
-JWT_SECRET=super_secret_brightloop_odoo_jwt_key_2026
-JWT_EXPIRES_IN=7d
-DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
-CLIENT_URL=http://localhost:5173
-```
-*(If `DATABASE_URL` is omitted, the system runs with the in-memory engine and persists snapshots to disk automatically).*
-
-### Step 5: Start the Development Servers
-
-**Terminal 1 — Backend API:**
-```bash
-cd server
-npm start
-# Server listens on http://localhost:5000
-```
-
-**Terminal 2 — Frontend Application:**
-```bash
-cd client
-npm run dev
-# Frontend live at http://localhost:5173
-```
-
-Visit `http://localhost:5173` in your browser.
-
----
-
-## 9. Running the Automated Test Suite
-
-The project includes an automated test harness covering all business logic, validation rules, financial reconciliation, and idempotency guarantees.
-
-### Run Comprehensive Test Suite:
+### Run Tests:
 ```bash
 cd server
 npm test
 ```
 
-### Test Suite Execution Output:
+### What Is Tested:
 ```
 ===============================================================
 🧪 RUNNING COMPREHENSIVE SUBSCRIPTION MANAGEMENT SYSTEM TESTS
@@ -445,110 +282,77 @@ npm test
 ===============================================================
 ```
 
-### Run Issue Verification Suite:
+You can also run the quick bug verification test anytime:
 ```bash
 node server/tests/verify_issues.js
-# Verifies customer persistence, admin provisioning, and automation expiry check
+# Confirms customer persistence, secondary admin creation, and expiry checks
 ```
 
 ---
 
-## 10. REST API Specification
+## 🔒 Security & Customer Privacy
 
-### Authentication & Users
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Public | Register customer account |
-| `POST` | `/api/auth/login` | Public | Authenticate user & receive JWT token |
-| `GET` | `/api/auth/me` | Authenticated | Fetch current profile & role |
-| `POST` | `/api/auth/forgot-password` | Public | Request password reset token |
-| `POST` | `/api/auth/reset-password` | Public | Reset password with token |
-| `GET` | `/api/users` | Admin | List team users (Admins & Staff) |
-| `POST` | `/api/users` | Admin | Create new Administrator or Staff account |
-| `PATCH` | `/api/users/:id/status` | Admin | Activate or deactivate team account |
-
-### Customers
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/customers` | Staff, Admin, Customer | List customers (isolated for customer role) |
-| `GET` | `/api/customers/:id` | Staff, Admin, Customer | Customer details with invoices & subscriptions |
-| `POST` | `/api/customers` | Staff, Admin | Create customer & auto-provision user login |
-| `PUT` | `/api/customers/:id` | Staff, Admin | Update customer details & GSTIN |
-
-### Products & Plans
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/products` | All Roles | List products and variant prices |
-| `POST` | `/api/products` | Admin | Create product with base price |
-| `POST` | `/api/products/:id/variants`| Admin | Add variant with additional price (+₹560) |
-| `GET` | `/api/plans` | All Roles | List active subscription plans |
-| `POST` | `/api/plans` | Admin | Create plan (Daily/Weekly/Monthly/Yearly) |
-
-### Quotations & Subscriptions
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/quotations` | All Roles | List quotations (isolated for customer) |
-| `POST` | `/api/quotations` | Staff, Admin | Create quotation with items, taxes, discounts |
-| `POST` | `/api/quotations/:id/confirm` | Staff, Admin | Confirm quotation and auto-create subscription |
-| `GET` | `/api/subscriptions` | All Roles | List subscriptions with status filters |
-| `PATCH` | `/api/subscriptions/:id/status`| Staff, Admin | Transition state (pause / resume / close) |
-| `POST` | `/api/subscriptions/:id/renew` | Staff, Admin | Manually trigger renewal cycle |
-
-### Invoices & Payments
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/invoices` | All Roles | List invoices (isolated for customer) |
-| `GET` | `/api/invoices/:id` | All Roles | Full invoice details and line items |
-| `GET` | `/api/payments` | Staff, Admin | List payment ledger records |
-| `POST` | `/api/payments` | Staff, Admin | Record payment (Cash, UPI, Card, Bank) |
-
-### Automation & Analytics
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/dashboard` | All Roles | Retrieve live MRR, ARR, KPIs, charts |
-| `POST` | `/api/automation/billing-run` | Admin | Trigger recurring billing engine on demand |
-| `POST` | `/api/automation/overdue-check` | Admin | Trigger overdue invoice detection |
-| `POST` | `/api/automation/renewal-reminders` | Admin | Send 7-day renewal reminder notifications |
-| `POST` | `/api/automation/expiry-check` | Admin | Scan and update expired subscriptions |
-| `GET` | `/api/automation/logs` | Admin | Review background scheduler execution logs |
+* **Strict Customer Isolation**: Customer accounts can only view their own quotations, subscriptions, and invoices. An ID tampering attempt on `/api/customers/1` or `/api/invoices/1` immediately returns `403 Forbidden`.
+* **Password Complexity**: All passwords must be at least 8 characters and include uppercase, lowercase, and special characters.
+* **Audit Trail**: Every significant action (creating quotes, activating subscriptions, recording payments, modifying user statuses) logs an entry to the `audit_logs` table with actor ID, timestamp, and IP address.
 
 ---
 
-## 11. Free-Tier Production Deployment Guide
+## ☁️ Zero-Cost Production Deployment
 
-The architecture is specifically engineered to deploy at zero cost using free cloud tiers:
+You can deploy the entire stack for free using these three services:
 
-### 1. Database: Supabase (Free Tier PostgreSQL)
-1. Create a free account at [Supabase](https://supabase.com).
-2. Create a new project and navigate to **Project Settings $\rightarrow$ Database**.
-3. Copy the **Connection String (URI)** (e.g. `postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres`).
-4. Run the schema file [`server/migrations/schema.sql`](server/migrations/schema.sql) in Supabase's SQL Editor.
+1. **Database — Supabase (Free Tier)**
+   * Create a project at [supabase.com](https://supabase.com).
+   * Copy your connection URI from **Project Settings $\rightarrow$ Database**.
+   * Run the SQL statements from [`server/migrations/schema.sql`](server/migrations/schema.sql) in the Supabase SQL Editor.
 
-### 2. Backend: Render (Free Tier Web Service)
-1. Create a free account at [Render](https://render.com).
-2. Create a **New Web Service** connected to your GitHub repository `https://github.com/tc484472-byte/odoo.git`.
-3. Set the following parameters:
-   * **Root Directory**: `server`
-   * **Build Command**: `npm install --legacy-peer-deps`
-   * **Start Command**: `npm start`
-4. Add Environment Variables:
-   * `DATABASE_URL`: Your Supabase connection string.
-   * `JWT_SECRET`: A long random secret string.
-   * `NODE_ENV`: `production`
-   * `CLIENT_URL`: Your frontend Vercel URL.
+2. **Backend — Render (Free Tier)**
+   * Create a new Web Service at [render.com](https://render.com) connected to this repository.
+   * Root Directory: `server`
+   * Build Command: `npm install --legacy-peer-deps`
+   * Start Command: `npm start`
+   * Set Environment Variables: `DATABASE_URL`, `JWT_SECRET`, and `CLIENT_URL`.
 
-### 3. Frontend: Vercel (Free Tier Hosting)
-1. Create a free account at [Vercel](https://vercel.com).
-2. Import the GitHub repository `https://github.com/tc484472-byte/odoo.git`.
-3. Set the **Root Directory** to `client`.
-4. Add the Environment Variable:
-   * `VITE_API_URL`: Your deployed Render backend URL (e.g. `https://brightloop-api.onrender.com/api`).
-5. Click **Deploy**. Vercel will build and serve the application globally via its CDN.
+3. **Frontend — Vercel (Free Tier)**
+   * Import the repository at [vercel.com](https://vercel.com).
+   * Root Directory: `client`
+   * Environment Variable: `VITE_API_URL` set to your Render backend URL.
+   * Deploy!
+
+---
+
+## 📂 Project Structure
+
+```
+odoo/
+├── client/                     # Frontend React application
+│   ├── src/
+│   │   ├── components/         # Reusable UI (Navbar, Sidebar, Modal, Badges)
+│   │   ├── context/            # AuthContext & Session management
+│   │   ├── pages/              # Dashboard, Quotes, Invoices, Subscriptions, etc.
+│   │   └── services/           # Axios API client wrapper
+│   ├── package.json
+│   └── vite.config.js
+│
+├── server/                     # Backend Node.js / Express API
+│   ├── controllers/            # Route controllers (Auth, Billing, Customers, etc.)
+│   ├── middleware/             # JWT auth, validation, rate limiting, audit logging
+│   ├── migrations/             # schema.sql (PostgreSQL) and seed.js
+│   ├── routes/                 # Express REST endpoint declarations
+│   ├── services/               # Core business logic (billingService.js)
+│   ├── tests/                  # run-tests.js (35 test assertions)
+│   ├── db.js                   # Dual-mode PostgreSQL connection manager
+│   ├── index.js                # Express app entrypoint & cron initialization
+│   └── package.json
+│
+├── .github/workflows/          # GitHub Actions recurring billing cron trigger
+└── README.md                   # You are here!
+```
 
 ---
 
 ## 📄 License
-This project is open-source and available under the [MIT License](LICENSE).
+This project is open-source and free to use under the [MIT License](LICENSE).
 
----
-*Built with ❤️ for the Odoo Hackathon by Brightloop Software Solutions.*
+*Built with passion for the Odoo Hackathon.*
