@@ -1,4 +1,5 @@
 # Brightloop Subscription Management System
+https://odoo-beryl.vercel.app/login
 > Odoo Hackathon Solution — Subscription Management, Recurring Billing Engine, Quotations, and Customer Self-Service Portal.
 
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
