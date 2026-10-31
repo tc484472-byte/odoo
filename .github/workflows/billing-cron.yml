@@ -1,0 +1,36 @@
+name: Daily Automated Recurring Billing & Overdue Audit
+
+on:
+  schedule:
+    # Runs daily at 00:05 AM IST (18:35 UTC previous day)
+    - cron: '35 18 * * *'
+  workflow_dispatch:
+    # Allows manual trigger from GitHub UI anytime for testing & demos
+
+jobs:
+  trigger-billing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Recurring Billing Job on Deployed Backend
+        run: |
+          echo "Triggering Brightloop Automated Recurring Billing..."
+          curl -X POST "${{ secrets.BACKEND_API_URL }}/api/automation/run-billing" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}" \
+            --fail --show-error || exit 1
+
+      - name: Trigger Overdue Invoices Detection Job
+        run: |
+          echo "Auditing Overdue Unpaid Invoices..."
+          curl -X POST "${{ secrets.BACKEND_API_URL }}/api/automation/overdue-check" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}" \
+            --fail --show-error || exit 1
+
+      - name: Trigger Renewal Reminders Job
+        run: |
+          echo "Dispatching Upcoming Renewal Reminders..."
+          curl -X POST "${{ secrets.BACKEND_API_URL }}/api/automation/renewal-reminders" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}" \
+            --fail --show-error || exit 1
