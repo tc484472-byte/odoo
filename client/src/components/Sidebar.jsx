@@ -12,7 +12,8 @@ import {
   Percent,
   Users,
   Building,
-  Cpu
+  Cpu,
+  Sparkles
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -29,16 +30,24 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between hidden md:flex">
       <div className="space-y-6">
-        {/* Core Ops Navigation */}
+        {/* Core Operations / Portal Navigation */}
         <div>
           <p className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Operations
+            {role === 'customer' ? 'Customer Portal' : 'Operations'}
           </p>
           <nav className="space-y-1">
             <NavLink to="/" end className={navItemClass}>
               <LayoutDashboard className="w-4 h-4" />
-              <span>{role === 'customer' ? 'My Portal' : 'Dashboard'}</span>
+              <span>{role === 'customer' ? 'My Overview' : 'Dashboard'}</span>
             </NavLink>
+
+            {/* Customers can explore all available subscription plans */}
+            {role === 'customer' && (
+              <NavLink to="/plans" className={navItemClass}>
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>Explore Plans</span>
+              </NavLink>
+            )}
 
             <NavLink to="/subscriptions" className={navItemClass}>
               <Repeat className="w-4 h-4" />
@@ -96,16 +105,16 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* System & Automation */}
+        {/* System & Team Provisioning for Admin */}
         {role === 'admin' && (
           <div>
             <p className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Management & Crons
+              Administration
             </p>
             <nav className="space-y-1">
               <NavLink to="/staff" className={navItemClass}>
                 <Users className="w-4 h-4" />
-                <span>Team & Admins</span>
+                <span>Staff & Admins</span>
               </NavLink>
 
               <NavLink to="/automation" className={navItemClass}>
@@ -117,17 +126,16 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Role Footer Card */}
-      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="text-xs font-semibold text-slate-700 capitalize">Mode: {role}</span>
-        </div>
-        <p className="text-[11px] text-slate-500">
-          {role === 'admin' && 'Full system, billing, staff, and pricing controls.'}
-          {role === 'staff' && 'Customer quotes, subscriptions, and payment collection.'}
-          {role === 'customer' && 'Self-service subscription and invoice portal.'}
-        </p>
+      {/* Role Badge Footer */}
+      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
+        <span className="text-slate-500 font-medium">Logged in as</span>
+        <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-wider text-[10px] ${
+          role === 'admin' ? 'bg-purple-100 text-purple-700' :
+          role === 'staff' ? 'bg-blue-100 text-blue-700' :
+          'bg-emerald-100 text-emerald-700'
+        }`}>
+          {role}
+        </span>
       </div>
     </aside>
   );

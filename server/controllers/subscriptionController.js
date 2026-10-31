@@ -18,7 +18,7 @@ async function getSubscriptions(req, res) {
     // Customer isolation: customers only see their own subscriptions
     if (req.user.role === 'customer') {
       queryText += ' WHERE s.customer_id = $1';
-      params.push(req.user.customerId);
+      params.push(req.user.customerId || 0);
     }
 
     queryText += ' ORDER BY s.created_at DESC';
@@ -192,7 +192,9 @@ async function createSubscription(req, res) {
 // Update Subscription Status (Lifecycle: activate, pause, resume, renew, close)
 async function updateSubscriptionStatus(req, res) {
   const { id } = req.params;
-  const { action, newExpiryDate } = req.body; // 'activate', 'pause', 'resume', 'renew', 'close'
+  const rawAction = (req.body.action || req.body.status || '').toLowerCase();
+  const action = rawAction === 'paused' ? 'pause' : (rawAction === 'active' ? 'resume' : rawAction);
+  const { newExpiryDate } = req.body;
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -210,6 +212,20 @@ async function updateSubscriptionStatus(req, res) {
     }
 
     const sub = subRes.rows[0];
+
+    // Customer isolation check
+    let effectiveCustId = req.user.customerId;
+    if (!effectiveCustId && req.user.id) {
+      const custLookup = await db.query('SELECT id FROM customers WHERE user_id = $1', [req.user.id]);
+      if (custLookup.rows.length > 0) {
+        effectiveCustId = custLookup.rows[0].id;
+      }
+    }
+
+    if (req.user.role === 'customer' && Number(sub.customer_id) !== Number(effectiveCustId)) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Cannot modify another customer subscription.' });
+    }
+
     let newStatus = sub.status;
     let updateFields = [];
     const params = [id];

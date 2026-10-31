@@ -7,7 +7,8 @@
 ![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?logo=tailwind-css&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791?logo=postgresql&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-35%2F35_Passing-brightgreen?logo=jest&logoColor=white)
+![Razorpay](https://img.shields.io/badge/Razorpay-Payment_Gateway-02042B?logo=razorpay&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen?logo=jest&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ---
@@ -16,17 +17,21 @@
 - [Overview](#overview)
 - [Quick Start](#quick-start)
 - [Demo Credentials](#demo-credentials)
+- [User Roles & Responsibilities](#user-roles--responsibilities)
 - [Pricing Case Study](#pricing-case-study)
 - [Tech Stack](#tech-stack)
 - [Architecture & Workflows](#architecture--workflows)
   - [System Architecture](#system-architecture)
   - [Quotation-to-Subscription Workflow](#quotation-to-subscription-workflow)
+  - [Customer Self-Service & Razorpay Checkout Workflow](#customer-self-service--razorpay-checkout-workflow)
   - [Subscription Lifecycle](#subscription-lifecycle)
   - [Idempotent Recurring Billing](#idempotent-recurring-billing)
   - [Payment Reconciliation](#payment-reconciliation)
 - [Database Schema](#database-schema)
-- [User Roles & Permissions](#user-roles--permissions)
 - [Core Features](#core-features)
+  - [Razorpay Payment Gateway Integration](#razorpay-payment-gateway-integration)
+  - [Customer Self-Service Subscription Catalog](#customer-self-service-subscription-catalog)
+  - [Upcoming Expiry Detection & Notification Bell](#upcoming-expiry-detection--notification-bell)
 - [Testing](#testing)
 - [Security](#security)
 - [API Specification](#api-specification)
@@ -42,10 +47,13 @@ Managing recurring billing and subscriptions with spreadsheets creates major ope
 * **Missed Renewals**: Contracts expiring without notice, causing lost recurring revenue.
 * **Double-Billing**: Concurrent requests or script restarts charging customers twice in the same billing cycle.
 * **Reconciliation Gaps**: Partial payments across UPI, bank transfer, and cash left untracked.
+* **Manual Bottlenecks**: Customers unable to explore plans, purchase subscriptions, or renew self-service.
 * **Financial Uncertainty**: Inability to report live Monthly Recurring Revenue (MRR) or Annual Recurring Revenue (ARR).
 
 The Brightloop Subscription Management System eliminates these issues:
 * Automates recurring invoicing with a scheduled billing engine.
+* Integrates Razorpay for seamless self-service checkout and 1-click renewal.
+* Delivers automated 7-day upcoming expiry alerts via an interactive Notification Center.
 * Prevents double-billing using database-level unique constraints.
 * Supports multi-variant pricing, dynamic discounts, and configurable tax rules.
 * Provides role-based portals for administrators, sales/operations staff, and customers.
@@ -96,11 +104,63 @@ Open `http://localhost:5173` in your browser.
 
 The top navigation bar contains a One-Click Persona Switcher for testing:
 
-| Role | Email | Password | Permissions |
+| Role | Email | Password | Primary Focus |
 | :--- | :--- | :--- | :--- |
-| **Administrator** | `admin@brightloop.io` | `Password@123` | Full control: Company analytics, team management, plans, taxes, discounts, automation triggers |
-| **Internal Staff** | `staff@brightloop.io` | `Password@123` | Sales & operations: Quotations, subscriptions, customer records, payment entries |
-| **Customer** | `customer@brightloop.io` | `Password@123` | Self-service: Own subscriptions, payment status, PDF invoice downloads |
+| **Administrator** | `admin@brightloop.io` | `Password@123` | System control, team management, billing rules, automation |
+| **Internal Staff** | `staff@brightloop.io` | `Password@123` | Daily operations, quotations, subscriptions, payment recording |
+| **Customer** | `customer@brightloop.io` | `Password@123` | Self-service portal, explore plans, Razorpay checkout, renewal |
+
+---
+
+## User Roles & Responsibilities
+
+The system enforces clear boundaries between three distinct user personas:
+
+### 1. Admin — Controls the entire system
+The admin is the owner or system manager who has the highest level of access.
+
+**Responsibilities:**
+* Create, edit, and delete products, variants, and subscription plans.
+* Configure prices, taxes, and promotional discounts.
+* Create staff accounts and secondary administrator accounts, and manage user roles.
+* Manage all customers, quotations, and active subscriptions across the company.
+* View and manage invoices, payments, and financial reports (MRR, ARR, Cashflow).
+* Configure automated billing rules, scheduler settings, and audit logs.
+
+*Example:* The admin launches a new software plan costing ₹2,000 per month and offers a 10% discount to eligible customers.
+
+---
+
+### 2. Internal Staff — Handles daily operations
+Staff members help manage customers and billing activities but have limited permissions.
+
+**Responsibilities:**
+* View and manage customer profiles and contact details.
+* Prepare quotations using templates with dynamic pricing calculations.
+* Create and manage subscriptions on behalf of clients.
+* Generate, confirm, send, and print invoices according to their permissions.
+* Record customer payments (Cash, UPI, Card, Bank Transfer) and reconcile balances.
+* Follow up on overdue invoices and payment reminders.
+* Monitor subscription and payment statuses.
+
+*Example:* A sales representative prepares a quotation for a customer, converts it into a subscription upon agreement, and records the payment received.
+
+*Note:* Staff cannot create new staff accounts, manage administrator settings, or alter core pricing configs unless explicitly authorized.
+
+---
+
+### 3. Customer — Manages their own subscriptions
+Customers access a dedicated, tenant-isolated portal to manage their account and billing information.
+
+**Responsibilities:**
+* Register and log in via the customer portal.
+* Explore company subscription plans and take/purchase subscriptions self-service using Razorpay.
+* View own subscriptions, subscription details, and real-time status.
+* View and download professional PDF tax invoices.
+* Check payment history, outstanding balances, and transaction receipts.
+* Manage permitted subscription lifecycle actions (such as pausing or requesting cancellation).
+* Receive 7-day upcoming expiration notifications and renew subscriptions via Razorpay.
+* Update account information, company GSTIN, and reset password.
 
 ---
 
@@ -129,12 +189,13 @@ All automated unit and integration tests verify this exact calculation.
 * **React Router DOM v7**: Client-side routing, protected routes, and role-based guards.
 * **Tailwind CSS v3**: Responsive styling for mobile, tablet, and desktop viewports.
 * **Recharts**: Data visualizations for revenue trends, payment distributions, and plan metrics.
-* **Lucide React**: Icon library.
+* **Lucide React**: Clean vector icon suite.
 * **jsPDF & html2canvas**: Client-side downloadable tax invoice generation.
 * **Axios**: HTTP client with request interceptors for JWT injection.
 
 ### Backend
 * **Node.js & Express.js**: REST API with controller-service architecture.
+* **Razorpay SDK**: Official integration with signature verification (`crypto` HMAC-SHA256) and zero-config fallback sandbox.
 * **JWT & bcryptjs**: Stateless authentication and salted password hashing (10 rounds).
 * **express-rate-limit**: Rate limiting on authentication and billing endpoints.
 * **dotenv**: Environment variable configuration.
@@ -159,23 +220,25 @@ flowchart TD
     subgraph Clients["Clients & UI Layer"]
         A["Admin Dashboard\n(Platform & Team Mgmt)"]
         B["Staff Workspace\n(Quotations & Payments)"]
-        C["Customer Portal\n(Self-Service & PDF Invoices)"]
+        C["Customer Portal\n(Self-Service & Razorpay Checkout)"]
     end
 
     subgraph API["Backend API (Express.js)"]
         D["JWT Auth & Role Guard"]
         E["Quotation & Subscription Service"]
         F["Idempotent Billing Engine"]
-        G["Payment Reconciliation Service"]
-        H["Automation Hub (node-cron)"]
+        G["Payment & Razorpay Service"]
+        H["Notification Engine"]
+        I["Automation Hub (node-cron)"]
     end
 
     subgraph DB["PostgreSQL Database (Supabase / In-Memory)"]
-        I[("Users & Roles")]
-        J[("Products & Variants")]
-        K[("Quotations & Subscriptions")]
-        L[("Invoices & Line Items")]
-        M[("Payments & Audit Logs")]
+        J[("Users & Roles")]
+        K[("Products & Variants")]
+        L[("Quotations & Subscriptions")]
+        M[("Invoices & Line Items")]
+        N[("Payments & Ledger")]
+        O[("Notifications & Audit Logs")]
     end
 
     A --> D
@@ -184,12 +247,15 @@ flowchart TD
     D --> E
     D --> F
     D --> G
-    H --> F
-    E --> J
+    D --> H
+    I --> F
+    I --> H
     E --> K
-    F --> L
-    G --> M
-    L --> M
+    E --> L
+    F --> M
+    G --> N
+    H --> O
+    M --> N
 ```
 
 ---
@@ -199,22 +265,51 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Staff as Internal Staff / Sales
-    participant API as API Server
+    actor Staff as Internal Staff
+    participant API as Backend API
     participant DB as PostgreSQL DB
     actor Cust as Customer
 
-    Staff->>API: Select Customer, Product, Variant (+₹560), Plan, Discount & Tax
-    API->>DB: Save Quotation (Status: 'draft' / 'sent')
-    Staff->>API: Click "Confirm & Create Subscription"
-    API->>DB: Begin Transaction
-    API->>DB: Update Quotation (Status: 'confirmed')
-    API->>DB: Create Subscription (Status: 'active', Next Billing: Start Date)
-    API->>DB: Create Subscription Line Items
-    API->>DB: Commit Transaction
-    API-->>Staff: Return Subscription #SUB-2026-000X
-    Cust->>API: Open Customer Portal
-    API-->>Cust: Displays Active Subscription & Renewal Dates
+    Staff->>API: POST /api/quotations (Client, Plan, Variants, Discounts)
+    API->>DB: INSERT INTO quotations (status = 'draft')
+    API-->>Staff: Return quotation details with tax breakdown
+
+    Staff->>API: POST /api/quotations/:id/confirm
+    API->>DB: UPDATE quotations SET status = 'confirmed'
+    API->>DB: INSERT INTO subscriptions (status = 'active', next_billing_date)
+    API->>DB: INSERT INTO invoices (INV-YYYY-XXXX, status = 'unpaid')
+    API-->>Staff: Subscription provisioned & initial invoice generated
+    API-->>Cust: Automated welcome notice & invoice ready in portal
+```
+
+---
+
+### Customer Self-Service & Razorpay Checkout Workflow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cust as Customer
+    participant UI as Customer Portal
+    participant API as Backend API
+    participant RZP as Razorpay Gateway
+    participant DB as PostgreSQL DB
+
+    Cust->>UI: Explore Plans (/plans) & Click "Subscribe with Razorpay"
+    UI->>UI: Select Seats, Add-on Variant, Enter Promo Code
+    UI->>API: POST /api/payments/razorpay/order (Plan, Seats, Coupon)
+    API->>RZP: Create Order (Amount in Paise, Currency INR)
+    RZP-->>API: order_id, amount, currency
+    API-->>UI: Return Razorpay Order Configuration
+
+    Cust->>UI: Submit Payment (UPI QR / Card / Netbanking)
+    UI->>API: POST /api/payments/razorpay/verify (Signature, Payment ID, Order ID)
+    API->>API: Verify HMAC-SHA256 Signature
+    API->>DB: INSERT INTO subscriptions (status = 'active')
+    API->>DB: INSERT INTO invoices (status = 'paid')
+    API->>DB: INSERT INTO payments (PAY-YYYY-XXXX, recorded)
+    API->>DB: INSERT INTO notifications (customer_id, 'payment_received')
+    API-->>UI: Payment confirmed, subscription active, receipt ready
 ```
 
 ---
@@ -223,19 +318,14 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Draft: Created by Staff / Quotation
-    Draft --> Confirmed: Validated by Customer
-    Confirmed --> Active: Activated on Start Date
-    
-    Active --> Paused: Staff / Customer Pause
-    Paused --> Active: Resume Subscription
-    
-    Active --> Active: Renew Period (Next Billing Advanced)
-    Active --> Expired: Current Date > Expiry Date (Auto-Job)
-    
-    Active --> Closed: Terminated by Admin / Staff
-    Paused --> Closed: Terminated
-    
+    [*] --> Active: Customer Razorpay Checkout / Staff Quote Confirmation
+    Active --> Paused: Customer / Admin requests Pause
+    Paused --> Active: Customer / Admin requests Resume
+    Active --> Expired: Expiry date reached without renewal
+    Active --> Renewed: Customer pays via Razorpay Renewal Modal
+    Renewed --> Active: Next billing date advanced
+    Active --> Closed: Customer requests termination / Admin closes
+    Paused --> Closed: Admin closes
     Expired --> [*]
     Closed --> [*]
 ```
@@ -246,23 +336,15 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-    Start["Daily Billing Cron Job Triggered"] --> FetchDue["Find Subscriptions WHERE status = 'active' AND next_billing_date <= TODAY"]
-    FetchDue --> CheckEmpty{"Any subscriptions due?"}
-    CheckEmpty -- No --> Done["Log: 0 Invoices Generated"]
-    CheckEmpty -- Yes --> LoopSubs["Iterate Over Each Due Subscription"]
-    
-    LoopSubs --> CheckDup{"SELECT id FROM invoices WHERE subscription_id = sub.id AND billing_period_start = sub.period_start"}
-    CheckDup -- Exists --> Skip["Idempotency Protection:\nSkip Duplicate Creation"]
-    CheckDup -- Does Not Exist --> Calc["Calculate Variant Charges + Apply Valid Discounts + Compute Taxes"]
-    
-    Calc --> GenerateInv["Generate Unique Invoice Number\n(INV-YYYY-XXXX)"]
-    GenerateInv --> SaveInv["INSERT INTO invoices & invoice_items"]
-    SaveInv --> AdvanceDate["Advance next_billing_date based on plan frequency\n(Daily/Weekly/Monthly/Yearly)"]
-    AdvanceDate --> RecordLog["Record in automation_logs & audit_logs"]
-    RecordLog --> SendEmail["Simulate Email Notification to Customer"]
-    Skip --> NextSub["Next Subscription"]
-    SendEmail --> NextSub
-    NextSub --> LoopSubs
+    Start["Scheduled Run / Manual Automation Trigger"] --> Query["Query active subscriptions WHERE next_billing_date <= today"]
+    Query --> Loop{"For each subscription"}
+    Loop --> Check{"Invoice already exists for this period?\n(uq_sub_billing_period check)"}
+    Check -- Yes --> Skip["Safely Skip Period\n(Idempotent Guard)"]
+    Check -- No --> Gen["Generate Invoice #INV-YYYY-XXXX\nSet Outstanding Balance"]
+    Gen --> Advance["Advance next_billing_date by frequency\n(monthly, yearly, weekly)"]
+    Advance --> RecordAudit["Log execution in automation_logs"]
+    Skip --> RecordAudit
+    RecordAudit --> Done["Billing run finished"]
 ```
 
 ---
@@ -273,7 +355,7 @@ flowchart TD
 flowchart LR
     Inv["Invoice #INV-2026-0001\nTotal: ₹13,338.72\nOutstanding: ₹13,338.72"] --> Pay1["Customer Pays Partial: ₹5,000 via UPI"]
     Pay1 --> Update1["Invoice Outstanding: ₹8,338.72\nStatus: 'confirmed' (Partial)"]
-    Update1 --> Pay2["Customer Pays Remaining: ₹8,338.72 via Bank Transfer"]
+    Update1 --> Pay2["Customer Pays Remaining: ₹8,338.72 via Razorpay"]
     Pay2 --> Update2["Invoice Outstanding: ₹0.00\nStatus: 'paid' (Reconciled)"]
 ```
 
@@ -291,6 +373,7 @@ erDiagram
     CUSTOMERS ||--o{ SUBSCRIPTIONS : "owns"
     CUSTOMERS ||--o{ INVOICES : "billed_to"
     CUSTOMERS ||--o{ PAYMENTS : "pays"
+    CUSTOMERS ||--o{ NOTIFICATIONS : "receives"
 
     PRODUCTS ||--o{ PRODUCT_VARIANTS : "has_variants"
     PLANS ||--o{ SUBSCRIPTIONS : "defines_terms"
@@ -307,154 +390,55 @@ erDiagram
     DISCOUNT_RULES ||--o{ DISCOUNT_USAGE : "tracks"
 ```
 
-The database schema is defined in [`server/migrations/schema.sql`](server/migrations/schema.sql) across 20 normalized tables. Key database-level guarantees include:
+The database schema is defined in [`server/migrations/schema.sql`](server/migrations/schema.sql) across 21 normalized tables. Key database-level guarantees include:
 * **Idempotency**: `CONSTRAINT uq_sub_billing_period UNIQUE(subscription_id, billing_period_start)`.
 * **Precision**: Monetary columns use `NUMERIC(12, 2)` with `CHECK (col >= 0)`.
 * **Integrity**: Cascading deletes on line items and restricted deletes on referenced products.
 
 ---
 
-## User Roles & Permissions
-
-| Capability / Module | Administrator | Internal Staff | Customer |
-| :--- | :---: | :---: | :---: |
-| Analytics Dashboard (MRR, ARR, KPIs) | Full Access | Full Access | Self Only |
-| Product & Variant Management | Full Access | View Only | No Access |
-| Plan Configuration | Full Access | View Only | No Access |
-| Discount & Tax Rules | Full Access | View Only | No Access |
-| Quotation Creation & Confirmation | Full Access | Full Access | View Own |
-| Subscription Lifecycle Control | Full Access | Full Access | View Own |
-| Invoice Generation & PDF Export | Full Access | Full Access | View / Download Own |
-| Payment Recording & Reconciliation | Full Access | Full Access | No Access |
-| Team Account Provisioning (Staff & Admins) | Exclusive | No Access | No Access |
-| Manual Automation Triggers | Full Access | No Access | No Access |
-| System Audit Log Inspection | Full Access | No Access | No Access |
-
----
-
 ## Core Features
 
-### Products & Multi-Variant Pricing
-* Manage products (services, consumables, software).
-* Configure variants that dynamically adjust base pricing:
-  $$\text{Final Price} = \text{Base Price} + \text{Variant Additional Price}$$
-  $$\text{Final Price} = ₹12,000 + ₹560 = ₹12,560$$
+### Razorpay Payment Gateway Integration
+* **Dynamic Server-Side Order Creation**: Evaluates plan base price, optional variant add-ons, quantity/seat scaling, promotional coupons, and 18% GST on the server before generating Razorpay orders in paise ($1 \text{ INR} = 100 \text{ paise}$).
+* **Signature Verification**: Verifies incoming webhooks and client signatures using cryptographic HMAC-SHA256 with the secret key.
+* **Dual Operation Mode**:
+  1. **Live / Test Keys**: Plug in your official `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` in `server/.env`.
+  2. **Sandbox Simulator**: Zero-configuration mode allows hackathon evaluators to test checkout flows without creating a Razorpay account.
 
-### Subscription Plans
-* Supported frequencies: **Daily**, **Weekly**, **Monthly**, and **Yearly**.
-* Policy settings for pause permissions, customer renewals, minimum quantities, and validity date ranges.
+### Customer Self-Service Subscription Catalog
+* **Explore Plans Page (`/plans`)**: Customers can browse all active plans, view pricing, billing intervals, features, and click "Subscribe with Razorpay".
+* **Checkout Modal**: Allows choosing seat counts, selecting optional add-ons (such as Odoo Brand +₹560), applying promo codes (e.g. `WELCOME10`), and viewing live breakdown before confirming payment.
+* **Self-Service Lifecycle**: Customers can pause and resume permitted subscriptions directly from their dashboard.
 
-### Quotations & 1-Click Conversion
-* Select client, plan, product variants, and quantities with real-time tax and discount calculation.
-* One-click conversion validates the quotation, provisions the active subscription, and sets initial billing dates.
-
-### Idempotent Recurring Invoicing
-* Background jobs query due active subscriptions and generate unique invoices (`INV-YYYY-XXXX`).
-* Unique composite database constraints guarantee duplicate runs skip previously invoiced periods safely.
-* Client-side PDF export ready for printing and customer accounting records.
-
-### Payment Reconciliation
-* Supports partial and full payments across UPI, Bank Transfer, Card, Cash, and Other methods.
-* Automatically updates invoice outstanding amounts and flags invoices as `Paid` upon reaching zero balance.
-
-### Automation Hub
-* **Billing Run**: Identifies due subscriptions, generates invoices, and advances calendar billing dates.
-* **7-Day Renewal Reminders**: Sends notifications for subscriptions approaching expiration.
-* **Overdue Detection**: Marks unpaid invoices past their due date as overdue.
-* **Subscription Expiry**: Automatically transitions ended subscriptions to expired status.
-
-### Analytics Dashboard
-* Live financial KPIs: MRR, ARR, Total Invoiced, Collected Revenue, and Outstanding Receivables.
-* Recharts visualizations: 6-month revenue trends, payment status distribution, and plan popularity.
+### Upcoming Expiry Detection & Notification Bell
+* **7-Day Expiry Engine**: Background scanner detects subscriptions expiring within 7 days.
+* **Interactive Notification Center**: Navbar notification bell displays an animated unread badge, category tags, and popover list.
+* **1-Click Renewal**: Customers can click "Renew via Razorpay" from the notification popover, dashboard banner, or subscription table to extend their term instantly.
 
 ---
 
 ## Testing
 
-The project includes an automated test suite containing 35 assertions covering security, validation, financial calculation, idempotency, and state machine transitions.
+The project includes an extensive automated test suite covering security, validation, financial calculation, idempotency, Razorpay payment flows, and state machine transitions.
 
-### Run Comprehensive Test Suite:
+### 1. Run Core Test Suite:
 ```bash
-cd server
 npm test
 ```
+*Executes all 35 test suites in `server/tests/run-tests.js`.*
 
-### Test Suite Output:
+### 2. Run Razorpay & Customer Self-Service Flow Test:
+```bash
+node server/tests/test_razorpay_flow.js
 ```
-===============================================================
-RUNNING COMPREHENSIVE SUBSCRIPTION MANAGEMENT SYSTEM TESTS
-===============================================================
-[Suite 1: Validation & Security]
-  PASS: Valid password accepted
-  PASS: Short password rejected
-  PASS: Password without uppercase rejected
-  PASS: Password without lowercase rejected
-  PASS: Password without special character rejected
-  PASS: Valid email accepted
-  PASS: Invalid email format rejected
+*Verifies customer login, plan selection, Razorpay order creation, payment verification, instant subscription provisioning, in-app notifications, pause/resume transitions, and Razorpay renewal.*
 
-[Suite 2: Role-Based Users & Customer Isolation]
-  PASS: Admin account exists
-  PASS: Staff account exists
-  PASS: Customer accounts exist
-
-[Suite 3: Product Variants & Price Calculations]
-  PASS: Core product exists
-  PASS: Odoo Brand variant exists
-  PASS: Odoo Brand variant adds exactly ₹560
-  PASS: Base (₹12,000) + Variant (₹560) = ₹12,560 calculated correctly
-
-[Suite 4: Subscription Plans]
-  PASS: Multiple plans configured
-  PASS: Monthly plan available
-  PASS: Yearly plan available
-
-[Suite 5: Date & Period Calculations]
-  PASS: Advance monthly adds 1 month
-  PASS: Advance yearly adds 1 year
-  PASS: Advance weekly adds 7 days
-  PASS: Advance daily adds 1 day
-
-[Suite 6: Recurring Billing Engine & Invoicing]
-  PASS: Billing engine executed successfully
-
-[Suite 7: Duplicate Invoice Prevention (Idempotency)]
-  PASS: Second billing run executed without error
-  PASS: Second run generated 0 new invoices (duplicate prevention active!)
-  PASS: Subscription safely skipped because billing period was already invoiced
-
-[Suite 8: Financial Calculations (Taxes & Discounts)]
-  PASS: 10% discount on ₹12,560 is ₹1,256
-  PASS: 18% GST on ₹11,304 is ₹2,034.72
-  PASS: Final total is ₹13,338.72
-
-[Suite 9: Payment Processing & Reconciliation]
-  PASS: Partial payment correctly reduces outstanding balance
-  PASS: Amount paid correctly updated
-
-[Suite 10: Overdue Detection Engine]
-  PASS: Overdue check completed without failure
-
-[Suite 11: Renewal Reminders]
-  PASS: Renewal reminders check completed without failure
-
-[Suite 12: Subscription Lifecycle State Machine]
-  PASS: Subscription transitioned from active to paused
-  PASS: Subscription transitioned from paused to active
-
-[Suite 13: Automation & Audit Logs]
-  PASS: Automation execution logs recorded
-
-===============================================================
-TEST SUMMARY: 35 PASSED, 0 FAILED
-===============================================================
-```
-
-### Run Issue Verification Suite:
+### 3. Run Issues & Persistence Verification:
 ```bash
 node server/tests/verify_issues.js
-# Verifies customer persistence, secondary admin creation, and automation expiry checks
 ```
+*Verifies customer persistence across queries, secondary admin creation, and automation expiry checks.*
 
 ---
 
@@ -481,6 +465,21 @@ node server/tests/verify_issues.js
 | `POST` | `/api/users` | Admin | Create Administrator or Staff account |
 | `PATCH` | `/api/users/:id/status` | Admin | Toggle account active status |
 
+### Razorpay & Payments
+| Method | Endpoint | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/payments/razorpay/order` | All Roles | Create Razorpay order with breakdown |
+| `POST` | `/api/payments/razorpay/verify` | All Roles | Verify Razorpay payment, activate/renew sub |
+| `GET` | `/api/payments` | Staff, Admin, Customer | List payment records (scoped to customer) |
+| `POST` | `/api/payments` | Staff, Admin | Record manual payment (Cash, UPI, Card, Bank) |
+
+### Notifications
+| Method | Endpoint | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/notifications` | All Roles | List user notifications & unread count |
+| `PATCH` | `/api/notifications/:id/read` | All Roles | Mark specific notification as read |
+| `PATCH` | `/api/notifications/read-all` | All Roles | Mark all notifications as read |
+
 ### Customers
 | Method | Endpoint | Role | Description |
 | :--- | :--- | :--- | :--- |
@@ -505,20 +504,14 @@ node server/tests/verify_issues.js
 | `POST` | `/api/quotations` | Staff, Admin | Create quotation with items, taxes, discounts |
 | `POST` | `/api/quotations/:id/confirm` | Staff, Admin | Confirm quotation and provision subscription |
 | `GET` | `/api/subscriptions` | All Roles | List subscriptions |
-| `PATCH` | `/api/subscriptions/:id/status`| Staff, Admin | Change state (pause, resume, close) |
-| `POST` | `/api/subscriptions/:id/renew` | Staff, Admin | Trigger renewal cycle |
+| `PATCH` | `/api/subscriptions/:id/status`| All Roles | Change state (pause, resume, close) |
+| `POST` | `/api/subscriptions/:id/renew` | Staff, Admin | Trigger manual renewal cycle |
 
-### Invoices & Payments
+### Invoices & Billing Automation
 | Method | Endpoint | Role | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/invoices` | All Roles | List invoices |
+| `GET` | `/api/invoices` | All Roles | List invoices (customer scoped) |
 | `GET` | `/api/invoices/:id` | All Roles | Invoice details and line items |
-| `GET` | `/api/payments` | Staff, Admin | List payment records |
-| `POST` | `/api/payments` | Staff, Admin | Record payment (Cash, UPI, Card, Bank) |
-
-### Automation & Analytics
-| Method | Endpoint | Role | Description |
-| :--- | :--- | :--- | :--- |
 | `GET` | `/api/dashboard` | All Roles | Retrieve live MRR, ARR, KPIs, charts |
 | `POST` | `/api/automation/billing-run` | Admin | Trigger recurring billing engine |
 | `POST` | `/api/automation/overdue-check` | Admin | Trigger overdue invoice detection |
@@ -546,6 +539,8 @@ The system is configured to run at zero cost on free cloud tiers:
 3. Environment Variables:
    * `DATABASE_URL`: Your Supabase connection string.
    * `JWT_SECRET`: A secure random secret string.
+   * `RAZORPAY_KEY_ID`: Your Razorpay Test Key ID (optional, sandbox active by default).
+   * `RAZORPAY_KEY_SECRET`: Your Razorpay Test Secret Key (optional).
    * `NODE_ENV`: `production`
    * `CLIENT_URL`: Your Vercel frontend URL.
 
@@ -564,20 +559,20 @@ The system is configured to run at zero cost on free cloud tiers:
 odoo/
 ├── client/                     # Frontend React application
 │   ├── src/
-│   │   ├── components/         # Reusable UI components (Navbar, Sidebar, Modal)
+│   │   ├── components/         # Navbar with Notification Bell, Sidebar, Modals
 │   │   ├── context/            # AuthContext & Session management
-│   │   ├── pages/              # Dashboard, Quotes, Invoices, Subscriptions, etc.
+│   │   ├── pages/              # Dashboard, Plans, Subscriptions, Quotes, Invoices
 │   │   └── services/           # Axios API client
 │   ├── package.json
 │   └── vite.config.js
 │
 ├── server/                     # Backend Express API
-│   ├── controllers/            # Route controllers
+│   ├── controllers/            # Payment, Notification, Subscription, User controllers
 │   ├── middleware/             # Auth, validation, rate limiting, audit logging
 │   ├── migrations/             # schema.sql and seed.js
 │   ├── routes/                 # REST endpoint definitions
-│   ├── services/               # Business logic & billing engine
-│   ├── tests/                  # run-tests.js (35 assertions)
+│   ├── services/               # Razorpay service, billing engine, email simulation
+│   ├── tests/                  # run-tests.js, test_razorpay_flow.js, verify_issues.js
 │   ├── db.js                   # PostgreSQL & pg-mem connection manager
 │   ├── index.js                # Express app entrypoint & cron setup
 │   └── package.json

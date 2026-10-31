@@ -114,10 +114,11 @@ export default function App() {
             }
           />
 
+          {/* Plans accessible to all roles so Customers can browse & subscribe */}
           <Route
             path="/plans"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <ProtectedRoute allowedRoles={['admin', 'staff', 'customer']}>
                 <DashboardLayout>
                   <PlansPage />
                 </DashboardLayout>

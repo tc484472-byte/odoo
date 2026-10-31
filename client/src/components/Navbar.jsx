@@ -1,9 +1,76 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, ShieldCheck, Briefcase, Zap, Bell } from 'lucide-react';
+import { api } from '../services/api';
+import { LogOut, Zap, Bell, Check, Clock, AlertTriangle, Receipt, CreditCard, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export function Navbar() {
   const { user, logout, login } = useAuth();
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const popoverRef = useRef(null);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await api.get('/notifications');
+      if (res.success) {
+        setNotifications(res.notifications || []);
+        setUnreadCount(res.unreadCount || 0);
+      }
+    } catch (e) {
+      // Ignore background notification fetch errors
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 20000); // Polling every 20s
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Click outside listener for dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.patch('/notifications/read-all', {});
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.is_read) {
+      try {
+        await api.patch(`/notifications/${notif.id}/read`, {});
+        setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    setIsOpen(false);
+
+    if (notif.type === 'renewal_reminder') {
+      navigate('/subscriptions');
+    } else if (notif.type === 'invoice_generated' || notif.type === 'overdue_notice') {
+      navigate('/invoices');
+    } else if (notif.type === 'payment_received') {
+      navigate('/payments');
+    }
+  };
 
   const handleQuickSwitch = async (roleEmail) => {
     try {
@@ -56,6 +123,104 @@ export function Navbar() {
           >
             Customer
           </button>
+        </div>
+
+        {/* Notification Bell */}
+        <div className="relative" ref={popoverRef}>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition"
+            title="Notifications & Renewal Reminders"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notifications Dropdown */}
+          {isOpen && (
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+              <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5 text-blue-600" /> Notifications & Alerts
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    {unreadCount > 0 ? `${unreadCount} unread update(s)` : 'All caught up!'}
+                  </p>
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                  >
+                    <Check className="w-3 h-3" /> Mark all read
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    No notifications yet.
+                  </div>
+                ) : (
+                  notifications.map((n) => {
+                    const isRenewal = n.type === 'renewal_reminder';
+                    const isOverdue = n.type === 'overdue_notice';
+                    const isPayment = n.type === 'payment_received';
+
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => handleNotificationClick(n)}
+                        className={`p-3.5 hover:bg-slate-50 cursor-pointer transition flex items-start gap-3 ${
+                          !n.is_read ? 'bg-blue-50/40' : ''
+                        }`}
+                      >
+                        <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+                          isRenewal ? 'bg-amber-100 text-amber-700' :
+                          isOverdue ? 'bg-rose-100 text-rose-700' :
+                          isPayment ? 'bg-emerald-100 text-emerald-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {isRenewal ? <Clock className="w-4 h-4" /> :
+                           isOverdue ? <AlertTriangle className="w-4 h-4" /> :
+                           isPayment ? <CreditCard className="w-4 h-4" /> :
+                           <Receipt className="w-4 h-4" />}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-bold text-slate-900 truncate">
+                              {n.title}
+                            </span>
+                            {!n.is_read && (
+                              <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 ml-2"></span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed mb-1">
+                            {n.message}
+                          </p>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>{new Date(n.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            {isRenewal && (
+                              <span className="text-blue-600 font-semibold flex items-center hover:underline">
+                                Renew now <ChevronRight className="w-3 h-3" />
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* User Profile Pill */}

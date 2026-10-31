@@ -7,10 +7,9 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const db = require('./db');
-const { seedData } = require('./migrations/seed');
-const { startScheduledJobs } = require('./automation/scheduler');
+const { initCronScheduler } = require('./services/cronScheduler');
 
-// Routes
+// Import Routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const customerRoutes = require('./routes/customerRoutes');
@@ -24,6 +23,7 @@ const taxRoutes = require('./routes/taxRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const automationRoutes = require('./routes/automationRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -79,6 +79,7 @@ app.use('/api/taxes', taxRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/automation', automationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Centralized 404 Handler
 app.use((req, res) => {
@@ -94,36 +95,27 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server & Bootstrap Database
+// Initialize database and start HTTP server
 async function startServer() {
   try {
-    console.log('[Server] Initializing database...');
     await db.initDb();
-
-    // Auto-seed in memory mode or if empty
-    if (db.isInMemory()) {
-      console.log('[Server] Running in-memory mode. Populating initial seed dataset...');
-      await seedData();
-    }
-
-    // Start background automation scheduler
-    startScheduledJobs();
+    initCronScheduler();
 
     app.listen(PORT, () => {
-      console.log(`=======================================================`);
-      console.log(`🚀 BRIGHTLOOP SUBSCRIPTION MANAGEMENT SERVER RUNNING`);
-      console.log(`📡 Port: ${PORT}`);
-      console.log(`🗄️  Database: ${db.isInMemory() ? 'In-Memory PostgreSQL' : 'Connected to Remote PostgreSQL'}`);
-      console.log(`⚡ Health Check: http://localhost:${PORT}/api/health`);
-      console.log(`=======================================================`);
+      console.log(`====================================================`);
+      console.log(`🚀 Brightloop Subscription Engine Live on Port ${PORT}`);
+      console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
+      console.log(`📊 Mode: ${db.isInMemory() ? 'In-Memory PostgreSQL (Snapshot active)' : 'Supabase Live'}`);
+      console.log(`====================================================`);
     });
-
   } catch (err) {
-    console.error('[Fatal Server Startup Error]:', err);
+    console.error('Fatal initialization error:', err);
     process.exit(1);
   }
 }
 
-startServer();
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 module.exports = app;
