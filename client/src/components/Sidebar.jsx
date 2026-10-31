@@ -12,8 +12,7 @@ import {
   Percent,
   Users,
   Building,
-  Cpu,
-  UserCheck
+  Cpu
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -106,7 +105,7 @@ export function Sidebar() {
             <nav className="space-y-1">
               <NavLink to="/staff" className={navItemClass}>
                 <Users className="w-4 h-4" />
-                <span>Staff Accounts</span>
+                <span>Team & Admins</span>
               </NavLink>
 
               <NavLink to="/automation" className={navItemClass}>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
-import { Building, Plus, Search, User, Mail, Phone, MapPin, Check, AlertCircle } from 'lucide-react';
+import { Building, Plus, Search, User, Mail, Phone, MapPin, Check, AlertCircle, Lock } from 'lucide-react';
 
 export function CustomersPage() {
   const { user } = useAuth();
@@ -19,7 +19,8 @@ export function CustomersPage() {
     email: '',
     phone: '',
     billingAddress: '',
-    gstNumber: ''
+    gstNumber: '',
+    password: 'Customer@12345'
   });
 
   const fetchCustomers = async () => {
@@ -32,6 +33,7 @@ export function CustomersPage() {
       }
     } catch (e) {
       console.error(e);
+      setAlertMsg({ text: e.message || 'Failed to load customers', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -62,8 +64,16 @@ export function CustomersPage() {
       const res = await api.post('/customers', form);
       if (res.success) {
         setIsModalOpen(false);
-        setForm({ companyName: '', contactName: '', email: '', phone: '', billingAddress: '', gstNumber: '' });
-        setAlertMsg({ text: `Customer "${res.customer.company_name}" created!`, type: 'success' });
+        setForm({
+          companyName: '',
+          contactName: '',
+          email: '',
+          phone: '',
+          billingAddress: '',
+          gstNumber: '',
+          password: 'Customer@12345'
+        });
+        setAlertMsg({ text: res.message || `Customer "${res.customer.company_name}" created successfully!`, type: 'success' });
         fetchCustomers();
       }
     } catch (err) {
@@ -164,7 +174,7 @@ export function CustomersPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Add Customer Record"
+        title="Add Customer Record & Portal Account"
       >
         <form onSubmit={handleCreateCustomer} className="space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
@@ -217,6 +227,24 @@ export function CustomersPage() {
           </div>
 
           <div>
+            <label className="block font-semibold text-slate-700 mb-1">Portal Login Password</label>
+            <div className="relative">
+              <input
+                type="password"
+                required
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder="Default: Customer@12345"
+                className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-xl text-xs"
+              />
+              <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+            </div>
+            <span className="text-[11px] text-slate-400 mt-1 block">
+              Creates login credentials for the customer portal (default: <code className="font-mono">Customer@12345</code>).
+            </span>
+          </div>
+
+          <div>
             <label className="block font-semibold text-slate-700 mb-1">GSTIN Number</label>
             <input
               type="text"
@@ -242,7 +270,7 @@ export function CustomersPage() {
             type="submit"
             className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-xs transition"
           >
-            Save Customer
+            Save Customer & Create Account
           </button>
         </form>
       </Modal>

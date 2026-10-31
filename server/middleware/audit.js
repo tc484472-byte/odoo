@@ -4,7 +4,7 @@ const db = require('../db');
 async function recordAuditLog(req, { action, entityType, entityId, oldValues = null, newValues = null }) {
   try {
     const userId = req && req.user ? req.user.id : null;
-    const ipAddress = req ? (req.headers['x-forwarded-for'] || req.socket.remoteAddress) : 'internal';
+    const ipAddress = req ? ((req.headers && req.headers['x-forwarded-for']) || (req.socket && req.socket.remoteAddress) || req.ip || '127.0.0.1') : 'internal';
 
     await db.query(
       `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, old_values, new_values, ip_address)

@@ -3,7 +3,7 @@ const db = require('../db');
 const { isValidPassword, isValidEmail } = require('../middleware/validate');
 const { recordAuditLog } = require('../middleware/audit');
 
-// List all users or staff (Admin only)
+// List all team users (Admin only)
 async function getUsers(req, res) {
   const { role } = req.query;
   try {
@@ -12,8 +12,11 @@ async function getUsers(req, res) {
     if (role) {
       queryText += ' WHERE role = $1';
       params.push(role);
+    } else {
+      // Default: return admin & staff
+      queryText += " WHERE role IN ('admin', 'staff')";
     }
-    queryText += ' ORDER BY created_at DESC';
+    queryText += ' ORDER BY role ASC, created_at DESC';
 
     const result = await db.query(queryText, params);
     return res.json({ success: true, users: result.rows });
@@ -22,13 +25,15 @@ async function getUsers(req, res) {
   }
 }
 
-// Create Staff Account (Admin Only)
-async function createStaff(req, res) {
-  const { email, password, fullName, phone } = req.body;
+// Create Internal User (Admin or Staff) - Admin Only
+async function createUser(req, res) {
+  const { email, password, fullName, phone, role = 'staff' } = req.body;
 
   if (!email || !password || !fullName) {
     return res.status(400).json({ success: false, message: 'Full name, email, and password are required.' });
   }
+
+  const userRole = role.toLowerCase() === 'admin' ? 'admin' : 'staff';
 
   if (!isValidEmail(email)) {
     return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
@@ -52,22 +57,23 @@ async function createStaff(req, res) {
       `INSERT INTO users (email, password_hash, full_name, role, phone)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, email, full_name, role, phone, is_active, created_at`,
-      [email.trim().toLowerCase(), passwordHash, fullName.trim(), 'staff', phone || null]
+      [email.trim().toLowerCase(), passwordHash, fullName.trim(), userRole, phone || null]
     );
 
-    const newStaff = result.rows[0];
+    const newUser = result.rows[0];
 
     recordAuditLog(req, {
-      action: 'CREATE_STAFF',
+      action: userRole === 'admin' ? 'CREATE_ADMIN' : 'CREATE_STAFF',
       entityType: 'users',
-      entityId: newStaff.id,
-      newValues: { email: newStaff.email, fullName: newStaff.full_name }
+      entityId: newUser.id,
+      newValues: { email: newUser.email, fullName: newUser.full_name, role: userRole }
     });
 
     return res.status(201).json({
       success: true,
-      message: 'Staff member account created successfully.',
-      staff: newStaff
+      message: `${userRole === 'admin' ? 'Administrator' : 'Staff member'} account created successfully.`,
+      user: newUser,
+      staff: newUser
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -110,6 +116,7 @@ async function toggleUserStatus(req, res) {
 
 module.exports = {
   getUsers,
-  createStaff,
+  createUser,
+  createStaff: createUser, // backward compatibility
   toggleUserStatus
 };

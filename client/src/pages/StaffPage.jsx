@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
-import { Users, UserPlus, Shield, Check, X, AlertCircle } from 'lucide-react';
+import { Users, UserPlus, Shield, ShieldCheck, Check, X, AlertCircle } from 'lucide-react';
 
 export function StaffPage() {
   const { user } = useAuth();
-  const [staffList, setStaffList] = useState([]);
+  const [teamList, setTeamList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [alertMsg, setAlertMsg] = useState({ text: '', type: '' });
@@ -15,7 +15,8 @@ export function StaffPage() {
     fullName: '',
     email: '',
     phone: '',
-    password: ''
+    password: '',
+    role: 'staff' // 'admin' or 'staff'
   });
 
   const checks = {
@@ -26,12 +27,13 @@ export function StaffPage() {
   };
   const isPasswordValid = checks.length && checks.upper && checks.lower && checks.special;
 
-  const fetchStaff = async () => {
+  const fetchTeam = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/users?role=staff');
+      // Fetch internal users (Admins & Staff)
+      const res = await api.get('/users');
       if (res.success) {
-        setStaffList(res.users);
+        setTeamList(res.users);
       }
     } catch (e) {
       console.error(e);
@@ -41,10 +43,10 @@ export function StaffPage() {
   };
 
   useEffect(() => {
-    fetchStaff();
+    fetchTeam();
   }, []);
 
-  const handleCreateStaff = async (e) => {
+  const handleCreateUser = async (e) => {
     e.preventDefault();
     if (!isPasswordValid) {
       alert('Password does not satisfy complexity requirements.');
@@ -52,25 +54,25 @@ export function StaffPage() {
     }
 
     try {
-      const res = await api.post('/users/staff', form);
+      const res = await api.post('/users', form);
       if (res.success) {
         setIsModalOpen(false);
-        setForm({ fullName: '', email: '', phone: '', password: '' });
-        setAlertMsg({ text: `Staff member "${res.staff.full_name}" created successfully!`, type: 'success' });
-        fetchStaff();
+        setForm({ fullName: '', email: '', phone: '', password: '', role: 'staff' });
+        setAlertMsg({ text: res.message || 'User account created successfully!', type: 'success' });
+        fetchTeam();
       }
     } catch (err) {
-      alert(err.message || 'Failed to create staff account');
+      alert(err.message || 'Failed to create account');
     }
   };
 
-  const handleToggleStatus = async (staffUser) => {
-    const nextStatus = !staffUser.is_active;
+  const handleToggleStatus = async (targetUser) => {
+    const nextStatus = !targetUser.is_active;
     try {
-      const res = await api.patch(`/users/${staffUser.id}/status`, { isActive: nextStatus });
+      const res = await api.patch(`/users/${targetUser.id}/status`, { isActive: nextStatus });
       if (res.success) {
-        setAlertMsg({ text: `Staff user status updated.`, type: 'success' });
-        fetchStaff();
+        setAlertMsg({ text: `Account status updated.`, type: 'success' });
+        fetchTeam();
       }
     } catch (err) {
       alert(err.message || 'Failed to update user status');
@@ -83,10 +85,10 @@ export function StaffPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <Users className="w-5 h-5 text-purple-600" />
-            Internal Staff Accounts (Admin Only)
+            Internal Team Accounts (Admins & Staff)
           </h1>
           <p className="text-sm text-slate-500">
-            Create and manage sales and operational staff members authorized to issue quotations, invoices, and record payments.
+            Create and manage accounts for Administrators (full platform access) and Operations/Sales Staff.
           </p>
         </div>
 
@@ -95,7 +97,7 @@ export function StaffPage() {
           className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs rounded-xl flex items-center gap-2 transition shadow-xs"
         >
           <UserPlus className="w-4 h-4" />
-          Add Staff Account
+          Add Admin or Staff Account
         </button>
       </div>
 
@@ -106,16 +108,16 @@ export function StaffPage() {
         </div>
       )}
 
-      {/* Staff Table */}
+      {/* Users Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">Staff Member</th>
+                <th className="py-3 px-4">User</th>
                 <th className="py-3 px-4">Email</th>
                 <th className="py-3 px-4">Phone</th>
-                <th className="py-3 px-4">Role</th>
+                <th className="py-3 px-4">Role Privileges</th>
                 <th className="py-3 px-4">Account Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -123,22 +125,38 @@ export function StaffPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">Loading staff accounts...</td>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">Loading accounts...</td>
                 </tr>
-              ) : staffList.length === 0 ? (
+              ) : teamList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">No staff members created yet.</td>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">No accounts created yet.</td>
                 </tr>
               ) : (
-                staffList.map((st) => (
+                teamList.map((st) => (
                   <tr key={st.id} className="hover:bg-slate-50/60 transition">
-                    <td className="py-3.5 px-4 font-bold text-slate-900">{st.full_name}</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2">
+                      {st.role === 'admin' ? (
+                        <ShieldCheck className="w-4 h-4 text-purple-600" />
+                      ) : (
+                        <Users className="w-4 h-4 text-blue-500" />
+                      )}
+                      {st.full_name}
+                      {st.id === user?.id && (
+                        <span className="text-[10px] text-slate-400 font-normal">(You)</span>
+                      )}
+                    </td>
                     <td className="py-3.5 px-4 text-slate-600">{st.email}</td>
                     <td className="py-3.5 px-4 text-slate-600">{st.phone || 'N/A'}</td>
                     <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
-                        {st.role}
-                      </span>
+                      {st.role === 'admin' ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                          Administrator
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                          Staff
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       {st.is_active ? (
@@ -148,12 +166,14 @@ export function StaffPage() {
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleToggleStatus(st)}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition ${st.is_active ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
-                      >
-                        {st.is_active ? 'Deactivate' : 'Activate'}
-                      </button>
+                      {st.id !== user?.id && (
+                        <button
+                          onClick={() => handleToggleStatus(st)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition ${st.is_active ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                        >
+                          {st.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -163,13 +183,30 @@ export function StaffPage() {
         </div>
       </div>
 
-      {/* Add Staff Modal */}
+      {/* Add User Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Create Internal Staff Account"
+        title="Create Team Account (Admin / Staff)"
       >
-        <form onSubmit={handleCreateStaff} className="space-y-4 text-xs">
+        <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Account Role *</label>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="w-full p-2.5 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="admin">Administrator (Full Access & Controls)</option>
+              <option value="staff">Internal Staff (Quotations, Subscriptions, Payments)</option>
+            </select>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {form.role === 'admin'
+                ? '⭐ Administrators can manage staff, configure taxes/discounts, and trigger automations.'
+                : 'Staff can view assigned records, issue quotes, manage subscriptions, and record payments.'}
+            </p>
+          </div>
+
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Full Name *</label>
             <input
@@ -177,7 +214,7 @@ export function StaffPage() {
               required
               value={form.fullName}
               onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              placeholder="e.g. Liam Miller"
+              placeholder="e.g. Alex Morgan"
               className="w-full p-2 border border-slate-300 rounded-xl"
             />
           </div>
@@ -190,7 +227,7 @@ export function StaffPage() {
                 required
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="staff@brightloop.com"
+                placeholder="alex@brightloop.com"
                 className="w-full p-2 border border-slate-300 rounded-xl"
               />
             </div>
@@ -200,14 +237,14 @@ export function StaffPage() {
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+91 98765 43211"
+                placeholder="+91 98765 43219"
                 className="w-full p-2 border border-slate-300 rounded-xl"
               />
             </div>
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Temporary Password *</label>
+            <label className="block font-semibold text-slate-700 mb-1">Account Password *</label>
             <input
               type="password"
               required
@@ -234,7 +271,7 @@ export function StaffPage() {
             disabled={!isPasswordValid}
             className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl shadow-xs transition disabled:opacity-50"
           >
-            Create Staff Account
+            Create {form.role === 'admin' ? 'Administrator' : 'Staff'} Account
           </button>
         </form>
       </Modal>

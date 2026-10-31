@@ -399,26 +399,50 @@ async function sendRenewalReminders() {
   }
 }
 
-// 4. SUBSCRIPTION EXPIRY DETECTION
+// 4. SUBSCRIPTION EXPIRY DETECTION (Clean, multi-database compatible)
 async function checkExpiredSubscriptions() {
   const today = new Date().toISOString().split('T')[0];
   try {
-    const expiredRes = await db.query(
-      `UPDATE subscriptions s
-       SET status = CASE WHEN p.auto_close = true THEN 'closed' ELSE 'expired' END,
-           updated_at = CURRENT_TIMESTAMP
-       FROM plans p
-       WHERE s.plan_id = p.id
-         AND s.status = 'active'
-         AND s.expiry_date < $1
-       RETURNING s.id, s.subscription_number, s.status`,
+    // Find active subscriptions whose expiry date has passed
+    const toExpireRes = await db.query(
+      `SELECT s.id, s.subscription_number, p.auto_close
+       FROM subscriptions s
+       JOIN plans p ON s.plan_id = p.id
+       WHERE s.status = 'active'
+         AND s.expiry_date IS NOT NULL
+         AND s.expiry_date < $1`,
       [today]
     );
 
-    console.log(`[Expiry Detection] Updated ${expiredRes.rows.length} expired subscriptions.`);
-    return { success: true, count: expiredRes.rows.length, expired: expiredRes.rows };
+    const expiredSubs = toExpireRes.rows;
+    const updated = [];
+
+    for (const sub of expiredSubs) {
+      const newStatus = sub.auto_close ? 'closed' : 'expired';
+      await db.query(
+        `UPDATE subscriptions 
+         SET status = $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2`,
+        [newStatus, sub.id]
+      );
+      updated.push({ id: sub.id, subscription_number: sub.subscription_number, status: newStatus });
+    }
+
+    await db.query(
+      `INSERT INTO automation_logs (job_name, status, processed_count, details)
+       VALUES ($1, $2, $3, $4)`,
+      ['SUBSCRIPTION_EXPIRY_AUDIT', 'success', updated.length, `Audited subscriptions. Marked ${updated.length} expired/closed.`]
+    );
+
+    console.log(`[Expiry Detection] Successfully updated ${updated.length} expired subscriptions.`);
+    return { success: true, count: updated.length, expired: updated };
   } catch (err) {
     console.error('[Expiry Detection Error]:', err.message);
+    await db.query(
+      `INSERT INTO automation_logs (job_name, status, processed_count, details, error_message)
+       VALUES ($1, $2, $3, $4, $5)`,
+      ['SUBSCRIPTION_EXPIRY_AUDIT', 'failure', 0, 'Error during subscription expiry check', err.message]
+    ).catch(() => {});
     throw err;
   }
 }
