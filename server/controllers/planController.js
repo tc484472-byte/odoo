@@ -4,16 +4,20 @@ const { recordAuditLog } = require('../middleware/audit');
 // List Plans
 async function getPlans(req, res) {
   try {
-    const plansRes = await db.query(
-      `SELECT p.*,
-              COUNT(DISTINCT s.id) as subscriber_count
-       FROM plans p
-       LEFT JOIN subscriptions s ON p.id = s.plan_id AND s.status = 'active'
-       GROUP BY p.id
-       ORDER BY p.name ASC`
-    );
+    const plansRes = await db.query('SELECT * FROM plans ORDER BY name ASC');
+    const subsRes = await db.query("SELECT plan_id FROM subscriptions WHERE status = 'active'");
 
-    return res.json({ success: true, plans: plansRes.rows });
+    const subCountMap = {};
+    subsRes.rows.forEach(s => {
+      subCountMap[s.plan_id] = (subCountMap[s.plan_id] || 0) + 1;
+    });
+
+    const plans = plansRes.rows.map(p => ({
+      ...p,
+      subscriber_count: subCountMap[p.id] || 0
+    }));
+
+    return res.json({ success: true, plans });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

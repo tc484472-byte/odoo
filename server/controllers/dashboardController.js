@@ -55,26 +55,33 @@ async function getDashboardMetrics(req, res) {
     const arr = mrr * 12;
 
     // 2. Monthly Revenue Trends (Last 6 Months)
-    const revenueTrendRes = await db.query(
-      `SELECT 
-         TO_CHAR(invoice_date, 'Mon YYYY') as month_label,
-         DATE_TRUNC('month', invoice_date) as sort_month,
-         COALESCE(SUM(total_amount), 0) as billed_amount,
-         COALESCE(SUM(amount_paid), 0) as collected_amount
-       FROM invoices
+    const invTrendRes = await db.query(
+      `SELECT invoice_date, total_amount, amount_paid FROM invoices
        ${isCustomer ? `WHERE customer_id = ${req.user.customerId}` : ''}
-       GROUP BY sort_month, month_label
-       ORDER BY sort_month DESC
-       LIMIT 6`
+       ORDER BY invoice_date ASC`
     );
 
-    const monthlyRevenue = revenueTrendRes.rows.reverse().map(r => ({
-      month: r.month_label,
-      billed: Number(Number(r.billed_amount).toFixed(2)),
-      collected: Number(Number(r.collected_amount).toFixed(2))
-    }));
+    const monthMap = {};
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    invTrendRes.rows.forEach(inv => {
+      const d = new Date(inv.invoice_date);
+      const label = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      if (!monthMap[label]) {
+        monthMap[label] = { month: label, billed: 0, collected: 0, sortKey: d.getTime() };
+      }
+      monthMap[label].billed += Number(inv.total_amount) || 0;
+      monthMap[label].collected += Number(inv.amount_paid) || 0;
+    });
 
-    // If fewer than 3 months, populate friendly labels
+    let monthlyRevenue = Object.values(monthMap)
+      .sort((a, b) => a.sortKey - b.sortKey)
+      .slice(-6)
+      .map(m => ({
+        month: m.month,
+        billed: Number(m.billed.toFixed(2)),
+        collected: Number(m.collected.toFixed(2))
+      }));
+
     if (monthlyRevenue.length === 0) {
       monthlyRevenue.push({ month: 'Oct 2026', billed: 13338.72, collected: 13338.72 });
     }
@@ -103,18 +110,19 @@ async function getDashboardMetrics(req, res) {
     }));
 
     // 4. Plan Distribution
-    const planDistRes = await db.query(
-      `SELECT p.name as plan_name, COUNT(s.id) as subscriber_count
-       FROM plans p
-       LEFT JOIN subscriptions s ON p.id = s.plan_id ${isCustomer ? `AND s.customer_id = ${req.user.customerId}` : ''}
-       GROUP BY p.id, p.name
-       ORDER BY subscriber_count DESC`
+    const plansRes = await db.query('SELECT id, name FROM plans ORDER BY name ASC');
+    const subPlansRes = await db.query(
+      `SELECT plan_id FROM subscriptions WHERE status = 'active' ${isCustomer ? `AND customer_id = ${req.user.customerId}` : ''}`
     );
+    const subPlanMap = {};
+    subPlansRes.rows.forEach(s => {
+      subPlanMap[s.plan_id] = (subPlanMap[s.plan_id] || 0) + 1;
+    });
 
-    const planDistribution = planDistRes.rows.map(p => ({
-      name: p.plan_name,
-      subscribers: parseInt(p.subscriber_count, 10)
-    }));
+    const planDistribution = plansRes.rows.map(p => ({
+      name: p.name,
+      subscribers: subPlanMap[p.id] || 0
+    })).sort((a, b) => b.subscribers - a.subscribers);
 
     // 5. Recent Activity / Alerts
     const recentInvoicesRes = await db.query(
