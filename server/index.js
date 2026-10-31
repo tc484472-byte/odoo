@@ -7,7 +7,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const db = require('./db');
-const { initCronScheduler } = require('./services/cronScheduler');
+//const { initCronScheduler } = require('./services/cronScheduler');
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
@@ -99,7 +99,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await db.initDb();
-    initCronScheduler();
+    //initCronScheduler();
 
     app.listen(PORT, () => {
       console.log(`====================================================`);
